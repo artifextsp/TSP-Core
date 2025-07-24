@@ -1,1 +1,632 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ejemplo Básico - TSP</title>
+    
+    <!-- TSP System - NO TOCAR -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../tsp-connector.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .game-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .game-display {
+            font-size: 4em;
+            margin: 30px 0;
+            font-weight: bold;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .game-display.correct {
+            background: rgba(76, 175, 80, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .game-display.wrong {
+            background: rgba(244, 67, 54, 0.3);
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        .game-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+            font-size: 1.2em;
+        }
+        
+        .stat {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #FFE082;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            font-weight: bold;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #F44336, #e53935);
+        }
+        
+        .answer-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 30px 0;
+        }
+        
+        .answer-btn {
+            background: linear-gradient(135deg, #9C27B0, #7B1FA2);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 12px;
+            font-size: 1.3em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: bold;
+            min-width: 120px;
+        }
+        
+        .answer-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(156, 39, 176, 0.4);
+        }
+        
+        .answer-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .message {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .message.success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 2px solid #4CAF50;
+        }
+        
+        .message.error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 2px solid #F44336;
+        }
+        
+        .message.info {
+            background: rgba(33, 150, 243, 0.3);
+            border: 2px solid #2196F3;
+        }
+        
+        .keyboard-hint {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        @media (max-width: 768px) {
+            .game-display {
+                font-size: 3em;
+            }
+            
+            .answer-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .game-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- EL HEADER TSP SE INSERTARÁ AUTOMÁTICAMENTE AQUÍ -->
+    
+    <div class="game-container">
+        <!-- Información del Juego -->
+        <div class="instructions">
+            <h2>🎯 Ejemplo Básico TSP</h2>
+            <p><strong>Objetivo:</strong> Clasifica cada número como PAR o IMPAR</p>
+            <p><strong>Habilidad:</strong> Atención y Procesamiento Numérico</p>
+            <p>Gana puntos clasificando correctamente. ¡Alcanza 12 aciertos para subir de nivel!</p>
+        </div>
+        
+        <!-- Área de Juego -->
+        <div class="game-display" id="gameDisplay">
+            ¿Listo para empezar?
+        </div>
+        
+        <!-- Botones de Respuesta -->
+        <div class="answer-buttons">
+            <button class="answer-btn" onclick="checkAnswer('par')" id="parBtn" disabled>
+                📊 PAR
+            </button>
+            <button class="answer-btn" onclick="checkAnswer('impar')" id="imparBtn" disabled>
+                📈 IMPAR
+            </button>
+        </div>
+        
+        <!-- Estadísticas del Juego -->
+        <div class="game-stats">
+            <div class="stat">
+                <div>Puntaje</div>
+                <div class="stat-value" id="scoreDisplay">0</div>
+            </div>
+            <div class="stat">
+                <div>Nivel</div>
+                <div class="stat-value" id="levelDisplay">1</div>
+            </div>
+            <div class="stat">
+                <div>Aciertos</div>
+                <div class="stat-value" id="correctDisplay">0/12</div>
+            </div>
+            <div class="stat">
+                <div>Errores</div>
+                <div class="stat-value" id="errorsDisplay">0/3</div>
+            </div>
+        </div>
+        
+        <!-- Controles del Juego -->
+        <div class="controls">
+            <button class="btn" onclick="startGame()" id="startBtn">
+                🚀 Comenzar Juego
+            </button>
+            <button class="btn btn-secondary" onclick="pauseGame()" id="pauseBtn" disabled>
+                ⏸️ Pausar
+            </button>
+            <button class="btn btn-danger" onclick="endGame()" id="endBtn" disabled>
+                🏁 Terminar
+            </button>
+        </div>
+        
+        <!-- Ayuda de Teclado -->
+        <div class="keyboard-hint">
+            💡 <strong>Atajos de teclado:</strong> A = PAR, S = IMPAR, Espacio = Pausar/Reanudar
+        </div>
+        
+        <!-- Mensajes del Juego -->
+        <div id="gameMessage" class="message" style="display: none;"></div>
+    </div>
 
+    <script>
+        // ============= CONFIGURACIÓN TSP =============
+        const TSP_GAME_CONFIG = {
+            gameId: 'basic-example',
+            gameName: 'Ejemplo Básico TSP',
+            cognitiveSkill: 'Atención y Procesamiento Numérico',
+            targetElement: 'body'
+        };
+
+        // ============= VARIABLES DEL JUEGO =============
+        let tspGame;              // Conector TSP
+        let gameActive = false;   // Estado del juego
+        let gameScore = 0;        // Puntaje actual
+        let gameLevel = 1;        // Nivel actual
+        let correctAnswers = 0;   // Respuestas correctas en el nivel actual
+        let totalErrors = 0;      // Errores totales
+        let currentNumber = null; // Número actual a clasificar
+        let isPaused = false;     // Estado de pausa
+        
+        // Configuración del juego
+        const ANSWERS_PER_LEVEL = 12;
+        const MAX_ERRORS = 3;
+        const SCORE_PER_CORRECT = 100;
+        const SCORE_LEVEL_BONUS = 500;
+
+        // ============= INICIALIZACIÓN TSP =============
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                console.log('🎯 Inicializando Ejemplo Básico TSP...');
+                
+                // Crear instancia TSP
+                tspGame = new TSPConnector(TSP_GAME_CONFIG);
+                
+                // Esperar inicialización
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                console.log('✅ TSP listo:', TSP_GAME_CONFIG.gameName);
+                showMessage('Sistema TSP conectado. ¡Listo para jugar!', 'success');
+                
+            } catch (error) {
+                console.error('❌ Error inicializando TSP:', error);
+                showMessage('Error de conexión TSP. Verificar configuración.', 'error');
+            }
+        });
+
+        // ============= FUNCIONES PRINCIPALES =============
+        
+        function startGame() {
+            if (!tspGame) {
+                showMessage('TSP no está inicializado. Recargar página.', 'error');
+                return;
+            }
+            
+            // Inicializar variables
+            gameActive = true;
+            isPaused = false;
+            gameScore = 0;
+            gameLevel = 1;
+            correctAnswers = 0;
+            totalErrors = 0;
+            
+            // Iniciar TSP tracking
+            tspGame.startGame();
+            
+            // Actualizar UI
+            updateGameDisplay();
+            updateButtonStates();
+            showMessage('¡Juego iniciado! Clasifica el primer número.', 'success');
+            
+            // Generar primer número
+            generateNewNumber();
+            
+            console.log('🚀 Juego iniciado');
+        }
+        
+        function pauseGame() {
+            if (!gameActive) return;
+            
+            isPaused = !isPaused;
+            
+            if (isPaused) {
+                showMessage('Juego pausado. Haz clic en "Reanudar" para continuar.', 'info');
+                document.getElementById('pauseBtn').textContent = '▶️ Reanudar';
+                disableAnswerButtons(true);
+            } else {
+                showMessage('¡Juego reanudado!', 'success');
+                document.getElementById('pauseBtn').textContent = '⏸️ Pausar';
+                disableAnswerButtons(false);
+            }
+        }
+        
+        function endGame() {
+            if (!gameActive) return;
+            
+            gameActive = false;
+            isPaused = false;
+            
+            // Finalizar TSP tracking
+            tspGame.endGame('manual_end');
+            
+            // Actualizar UI
+            updateButtonStates();
+            disableAnswerButtons(true);
+            
+            const finalMessage = `🏁 Juego terminado manualmente.<br>
+                                 Puntaje final: <strong>${gameScore}</strong> puntos<br>
+                                 Nivel alcanzado: <strong>${gameLevel}</strong>`;
+            
+            showMessage(finalMessage, 'info');
+            document.getElementById('gameDisplay').textContent = '🏁 Fin del Juego';
+            
+            console.log('🏁 Juego terminado manualmente');
+        }
+
+        // ============= LÓGICA DEL JUEGO =============
+        
+        function generateNewNumber() {
+            if (!gameActive || isPaused) return;
+            
+            // Generar número aleatorio entre 1 y 100
+            currentNumber = Math.floor(Math.random() * 100) + 1;
+            
+            // Mostrar número con animación
+            const display = document.getElementById('gameDisplay');
+            display.style.transform = 'scale(0.8)';
+            display.textContent = currentNumber;
+            
+            setTimeout(() => {
+                display.style.transform = 'scale(1)';
+            }, 200);
+            
+            // Habilitar botones de respuesta
+            disableAnswerButtons(false);
+        }
+        
+        function checkAnswer(userAnswer) {
+            if (!gameActive || isPaused || currentNumber === null) return;
+            
+            // Deshabilitar botones temporalmente
+            disableAnswerButtons(true);
+            
+            // Determinar respuesta correcta
+            const isEven = currentNumber % 2 === 0;
+            const correctAnswer = isEven ? 'par' : 'impar';
+            const isCorrect = userAnswer === correctAnswer;
+            
+            // Procesar respuesta
+            if (isCorrect) {
+                onCorrectAnswer();
+            } else {
+                onWrongAnswer();
+            }
+        }
+        
+        function onCorrectAnswer() {
+            correctAnswers++;
+            gameScore += SCORE_PER_CORRECT;
+            
+            // Actualizar TSP
+            tspGame.updateScore(gameScore, gameLevel);
+            
+            // Efectos visuales
+            showCorrectEffect();
+            updateGameDisplay();
+            
+            // Verificar si completó el nivel
+            if (correctAnswers >= ANSWERS_PER_LEVEL) {
+                levelUp();
+            } else {
+                showMessage(`¡Correcto! +${SCORE_PER_CORRECT} puntos`, 'success');
+                setTimeout(generateNewNumber, 1000);
+            }
+        }
+        
+        function onWrongAnswer() {
+            totalErrors++;
+            
+            // Efectos visuales
+            showWrongEffect();
+            updateGameDisplay();
+            
+            // Verificar game over
+            if (totalErrors >= MAX_ERRORS) {
+                gameOver();
+            } else {
+                showMessage(`Incorrecto. Quedan ${MAX_ERRORS - totalErrors} intentos.`, 'error');
+                setTimeout(generateNewNumber, 1000);
+            }
+        }
+        
+        function levelUp() {
+            gameLevel++;
+            gameScore += SCORE_LEVEL_BONUS;
+            correctAnswers = 0; // Resetear aciertos para el nuevo nivel
+            
+            // Actualizar TSP
+            tspGame.completeLevel();
+            tspGame.updateScore(gameScore, gameLevel);
+            
+            // Actualizar UI
+            updateGameDisplay();
+            
+            const levelMessage = `🎉 ¡Nivel ${gameLevel} alcanzado!<br>
+                                 Bonus: +${SCORE_LEVEL_BONUS} puntos<br>
+                                 ¡Continúa así!`;
+            
+            showMessage(levelMessage, 'success');
+            
+            // Continuar con siguiente nivel
+            setTimeout(generateNewNumber, 2500);
+        }
+        
+        function gameOver() {
+            gameActive = false;
+            
+            // Finalizar TSP tracking
+            tspGame.endGame('failed');
+            
+            // Actualizar UI
+            updateButtonStates();
+            disableAnswerButtons(true);
+            
+            const gameOverMessage = `💀 Game Over<br>
+                                   Demasiados errores (${totalErrors}/${MAX_ERRORS})<br>
+                                   Puntaje final: <strong>${gameScore}</strong> puntos`;
+            
+            showMessage(gameOverMessage, 'error');
+            document.getElementById('gameDisplay').textContent = '💀 Game Over';
+            
+            console.log('💀 Game Over - Demasiados errores');
+        }
+
+        // ============= FUNCIONES DE UI =============
+        
+        function updateGameDisplay() {
+            document.getElementById('scoreDisplay').textContent = gameScore;
+            document.getElementById('levelDisplay').textContent = gameLevel;
+            document.getElementById('correctDisplay').textContent = `${correctAnswers}/${ANSWERS_PER_LEVEL}`;
+            document.getElementById('errorsDisplay').textContent = `${totalErrors}/${MAX_ERRORS}`;
+        }
+        
+        function updateButtonStates() {
+            const startBtn = document.getElementById('startBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const endBtn = document.getElementById('endBtn');
+            
+            if (gameActive) {
+                startBtn.disabled = true;
+                pauseBtn.disabled = false;
+                endBtn.disabled = false;
+            } else {
+                startBtn.disabled = false;
+                pauseBtn.disabled = true;
+                endBtn.disabled = true;
+                pauseBtn.textContent = '⏸️ Pausar';
+            }
+        }
+        
+        function disableAnswerButtons(disabled) {
+            document.getElementById('parBtn').disabled = disabled;
+            document.getElementById('imparBtn').disabled = disabled;
+        }
+        
+        function showCorrectEffect() {
+            const display = document.getElementById('gameDisplay');
+            display.classList.add('correct');
+            setTimeout(() => display.classList.remove('correct'), 500);
+        }
+        
+        function showWrongEffect() {
+            const display = document.getElementById('gameDisplay');
+            display.classList.add('wrong');
+            setTimeout(() => display.classList.remove('wrong'), 500);
+        }
+        
+        function showMessage(html, type = 'info') {
+            const messageEl = document.getElementById('gameMessage');
+            messageEl.innerHTML = html;
+            messageEl.className = `message ${type}`;
+            messageEl.style.display = 'block';
+            
+            // Auto-ocultar después de 4 segundos
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, 4000);
+        }
+
+        // ============= EVENTOS DE TECLADO =============
+        
+        document.addEventListener('keydown', (event) => {
+            if (!gameActive) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    startGame();
+                }
+                return;
+            }
+            
+            // Prevenir comportamiento por defecto
+            if (['a', 'A', 's', 'S', ' '].includes(event.key)) {
+                event.preventDefault();
+            }
+            
+            // Controles del juego
+            if (event.key === 'a' || event.key === 'A') {
+                checkAnswer('par');
+            } else if (event.key === 's' || event.key === 'S') {
+                checkAnswer('impar');
+            } else if (event.key === ' ') {
+                pauseGame();
+            }
+        });
+
+        // ============= FUNCIONES AUXILIARES =============
+        
+        function resetGame() {
+            gameActive = false;
+            isPaused = false;
+            gameScore = 0;
+            gameLevel = 1;
+            correctAnswers = 0;
+            totalErrors = 0;
+            currentNumber = null;
+            
+            updateGameDisplay();
+            updateButtonStates();
+            disableAnswerButtons(true);
+            
+            document.getElementById('gameDisplay').textContent = '¿Listo para empezar?';
+            showMessage('Juego reiniciado', 'info');
+        }
+        
+        // Debug function (solo para desarrollo)
+        function debugInfo() {
+            console.log('🐛 Debug Info:', {
+                gameActive,
+                isPaused,
+                gameScore,
+                gameLevel,
+                correctAnswers,
+                totalErrors,
+                currentNumber,
+                tspConnected: !!tspGame
+            });
+        }
+        
+        // Exponer función de debug globalmente
+        window.debugTSP = debugInfo;
+        
+        console.log('🎯 Ejemplo Básico TSP cargado. Usar debugTSP() para información de debug.');
+    </script>
+</body>
+</html>
